@@ -2,6 +2,14 @@ class MovieData
 	attr_reader :train_file, :test_file, :train_hash, :movie_hash
 
 	def initialize(direct_name, file_name = "u.data")  # if file_name is empty, default
+		file_open(direct_name, file_name)
+		@train_hash = {}
+		@movie_hash = {}
+		load_data
+	end
+
+	#open train and test file according to the given file_name
+	def file_open(direct_name, file_name)
 		if file_name == "u.data"
 			train_name =  "./" + direct_name + "/" + file_name
 			test_file = nil
@@ -12,9 +20,6 @@ class MovieData
 			@test_file = File.open(test_name)
 		end
 		@train_file = File.open(train_name)
-		@train_hash = {}
-		@movie_hash = {}
-		load_data
 	end
 
 	#load data into train and movie hash
@@ -231,7 +236,7 @@ puts movie_data.movie_avg(303)
 # puts movie_data.predict(1,6)
 # movie_data.put_test
 puts Time.now
-test = movie_data.run_test
+test = movie_data.run_test(10)
 puts Time.now
 # puts test.size
 puts "mean #{test.mean}"
