@@ -1,5 +1,5 @@
 class MovieData
-	attr_reader :train_file, :test_file, :train_hash
+	attr_reader :train_file, :test_file, :train_hash, :movie_hash
 
 	def initialize(direct_name, file_name = "u.data")  # if file_name is empty, default
 		if file_name == "u.data"
@@ -13,18 +13,20 @@ class MovieData
 		end
 		@train_file = File.open(train_name)
 		@train_hash = {}
+		@movie_hash = {}
 		load_data
 	end
 
-	#load data into train and test hash
+	#load data into train and movie hash
 	def load_data
 		load_train_or_test(train_file,train_hash)
-		# load_train_or_test(test_file,test_hash)
+		load_movie_hash(train_file, movie_hash)
 	end
 
 	#load data from a file
 	def load_train_or_test(file_name, hash_name)
 		#hash key is user_id, value is a hash table whose keys are movie_id
+		train_file.seek(0)
 		if file_name != nil
 			file_name.each_line do |line|
 				splited = line.split(" ")
@@ -40,15 +42,34 @@ class MovieData
 		end
 	end
 
+	def load_movie_hash(file_name,hash_name)
+		#hash key is movie_id, value is a hash table whose keys are user_id
+		train_file.seek(0)
+		if file_name != nil
+			file_name.each_line do |line|
+				splited = line.split(" ")
+				user_id = splited[0].to_i
+				movie_id = splited[1].to_i
+				rating = splited[2].to_i
+				timestamp = splited[3].to_i
+				if not hash_name.has_key?(movie_id)  #if a user is not hashed, initialize the value to be a hash
+					hash_name[movie_id] = {}
+				end
+				hash_name[movie_id][user_id] = {rating: rating, timestamp: timestamp}
+			end
+		end
+	end
+
+
 	#return the rating of a user in train data
 	def rating(user_id, movie_id)
 		if not train_hash.has_key?(user_id)   #user_id not valid
 			puts "no such user"
 		else
 			if not train_hash[user_id].has_key?(movie_id)   #movie not seen return 0
-				0
+				return 0
 			else
-				train_hash[user_id][movie_id][:rating]    #if exist return rating
+				return train_hash[user_id][movie_id][:rating]    #if exist return rating
 			end
 		end
 	end
@@ -64,14 +85,7 @@ class MovieData
 
 	#return a list of user_id who have watched the given movie
 	def viewers(movie_id)
-		#go through all the user_id to see if that hash has the key of movie_id 
-		viewers = []
-		train_hash.keys.sort.each do |user_id|
-			if train_hash[user_id].has_key?(movie_id)
-				viewers.push(user_id)
-			end
-		end
-		return viewers
+		return movie_hash[movie_id].keys
 	end
 
 	#predict: calculate the average rating of a movie, and the average deviation of rating of a user,
@@ -89,23 +103,20 @@ class MovieData
 		end	
 	end
 
-
-	# def predict(user_id,movie_id)
-	# 	return movie_avg(movie_id)
-	# end
-
 	#give the average rating of a given movie
 	def movie_avg(movie_id)
 		sum = 0
 		count = 0
-		train_hash.keys.sort.each do |user_id|
-			if train_hash[user_id].has_key?(movie_id)
-				count += 1
-				sum += train_hash[user_id][movie_id][:rating]
-			end
+		if not movie_hash.has_key?(movie_id)
+			return 3
+		end
+		movie_hash[movie_id].values.each do |user|
+			sum += user[:rating]
+			count += 1
 		end
 		return sum.to_f / count
 	end
+
 
 	#give the average of the errorerence between a user's ratings and average ratings
 	def user_deviation(user_id)
@@ -159,7 +170,7 @@ end
 
 
 class MovieTest
-	attr_reader :pred_list, :size, :mean
+	attr_reader :pred_list
 
 	def initialize(pred_list)
 		@pred_list = pred_list
@@ -182,8 +193,9 @@ class MovieTest
 	#the standard deviation of the predict error
 	def stddev
 		sum = 0
+		m = mean
 		pred_list.each do |pred|
-			sum += (pred[:error] - mean) ** 2
+			sum += (pred[:error] - m) ** 2
 		end
 		return Math.sqrt(sum / size)
 	end
@@ -197,6 +209,7 @@ class MovieTest
 		return Math.sqrt(sum / size)
 	end
 
+	#list all the predict results
 	def to_a
 		pred_list.each do |pred|
 			puts "\[#{pred[:user_id]}, #{pred[:movie_id]}, #{pred[:rating]}, #{pred[:predict]} \]"
@@ -211,16 +224,21 @@ movie_data= MovieData.new('ml-100k',:u1)
 # puts movie_data.rating(4,303)
 # puts movie_data.movies(4)
 # puts movie_data.viewers(303)
-# puts movie_data.movie_avg(303)
+# puts movie_data.viewers2(303)
+puts movie_data.movie_avg(303)
+
 # puts movie_data.user_deviation(1)
 # puts movie_data.predict(1,6)
 # movie_data.put_test
-test = movie_data.run_test(100)
+puts Time.now
+test = movie_data.run_test
+puts Time.now
+# puts test.size
+puts "mean #{test.mean}"
+#puts test.to_a
+puts "stddev: #{test.stddev}"
+puts "rms : #{test.rms}"
 puts test.size
-puts mean = test.mean
-puts test.to_a
-puts test.stddev
-puts test.rms
 # f = File.open("./ml-100k/u1.base")
 # f.each_line do |line|
 # 	puts line
