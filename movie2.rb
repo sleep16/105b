@@ -12,7 +12,7 @@ class MovieData
 	def file_open(direct_name, file_name)
 		if file_name == "u.data"
 			train_name =  "./" + direct_name + "/" + file_name
-			test_file = nil
+			@test_file = nil
 		else
 			#when file_name is not empty
 			train_name = "./" + direct_name + "/" + file_name.to_s + ".base"
@@ -24,46 +24,32 @@ class MovieData
 
 	#load data into train and movie hash
 	def load_data
-		load_train_or_test(train_file,train_hash)
-		load_movie_hash(train_file, movie_hash)
+		load_using_arr(train_file,train_hash,0,1)
+		load_using_arr(train_file,movie_hash,1,0)
 	end
 
-	#load data from a file
-	def load_train_or_test(file_name, hash_name)
-		#hash key is user_id, value is a hash table whose keys are movie_id
-		train_file.seek(0)
+	def load_using_arr(file_name,hash_name, i, j)
+		file_name.seek(0)
 		if file_name != nil
 			file_name.each_line do |line|
-				splited = line.split(" ")
-				user_id = splited[0].to_i
-				movie_id = splited[1].to_i
-				rating = splited[2].to_i
-				timestamp = splited[3].to_i
-				if not hash_name.has_key?(user_id)  #if a user is not hashed, initialize the value to be a hash
-					hash_name[user_id] = {}
+				arr = parse_line(line)
+				if not hash_name.has_key?(arr[i])  #if a user is not hashed, initialize the value to be a hash
+					hash_name[arr[i]] = {}
 				end
-				hash_name[user_id][movie_id] = {rating: rating, timestamp: timestamp}
+				hash_name[arr[i]][arr[j]] = {rating: arr[2], timestamp: arr[3]}
 			end
 		end
 	end
 
-	def load_movie_hash(file_name,hash_name)
-		#hash key is movie_id, value is a hash table whose keys are user_id
-		train_file.seek(0)
-		if file_name != nil
-			file_name.each_line do |line|
-				splited = line.split(" ")
-				user_id = splited[0].to_i
-				movie_id = splited[1].to_i
-				rating = splited[2].to_i
-				timestamp = splited[3].to_i
-				if not hash_name.has_key?(movie_id)  #if a user is not hashed, initialize the value to be a hash
-					hash_name[movie_id] = {}
-				end
-				hash_name[movie_id][user_id] = {rating: rating, timestamp: timestamp}
-			end
-		end
+	def parse_line(line)
+		splited = line.split(" ")
+		user_id = splited[0].to_i
+		movie_id = splited[1].to_i
+		rating = splited[2].to_i
+		timestamp = splited[3].to_i
+		return [user_id, movie_id, rating, timestamp]
 	end
+
 
 
 	#return the rating of a user in train data
